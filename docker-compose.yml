@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: azzurro-app
+    container_name: azzurro-app
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./certbot/www/:/var/www/certbot/:rw
+      - ./certbot/conf/:/etc/letsencrypt/:rw
+
+  webserver:
+    image: nginx:alpine
+    container_name: azzurro-app-webserver
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./certbot/www:/var/www/certbot/:ro
+      - ./certbot/conf/:/etc/letsencrypt/:ro
+    networks:
+      - app-network
+
+  db:
+    image: postgres:13
+    container_name: azzurro-app-db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: azzurro_app
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  scheduler:
+    image: azzurro-app
+    container_name: azzurro-app-scheduler
+    restart: always
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    entrypoint: >
+      sh -c 'while true; do
+        php /var/www/html/artisan schedule:run --verbose --no-interaction &
+        sleep 60
+      done'
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local

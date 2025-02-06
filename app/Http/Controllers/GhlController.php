@@ -34,12 +34,14 @@ class GhlController extends Controller
 
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
+            'location_id' => 'required|string|max:255',
             'client_id' => 'required|string|max:255',
             'client_secret' => 'required|string|max:255',
         ]);
 
         $location = new GhlLocation();
         $location->name = $request->name;
+        $location->location_id = $request->location_id;
         $location->client_id = $request->client_id;
         $location->client_secret = $request->client_secret;
         $location->save();
@@ -93,14 +95,9 @@ class GhlController extends Controller
     public function saveLocationAuthCode(Request $request)
     {
         $validatedData = $request->validate([
-            'location_id' => 'required|integer',
+            'location_id' => 'required|string',
             'code' => 'required|string',
         ]);
-
-        $location = GhlLocation::find($request->location_id);
-        if (empty($location)) {
-            return back()->with('error', 'GHL Location Not Found!');
-        }
 
         $saved = UserToken::updateOrCreate(
             ['user_id' => $this->userId, 'type' => WebhookSourceEnums::GHL, 'property_id' => $request->location_id],
@@ -118,22 +115,15 @@ class GhlController extends Controller
     /**
      * Save Go High Level API auth token into database
      */
-    public static function saveGhlToken($id, $locationId, $accessToken, $refreshToken)
+    public static function saveGhlToken($locationId, $accessToken, $refreshToken)
     {
         $userToken = UserToken::updateOrCreate(
-            ['user_id' => UserToken::$DEFAULT_USER_ID, 'type' => WebhookSourceEnums::GHL, 'property_id' => $id],
+            ['user_id' => UserToken::$DEFAULT_USER_ID, 'type' => WebhookSourceEnums::GHL, 'property_id' => $locationId],
             [
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
             ]
         );
-        if ($userToken) {
-            $location = GhlLocation::find($id);
-            if ($location) {
-                $location->location_id = $locationId;
-                $location->save();
-            }
-        }
         return $userToken;
     }
 
@@ -155,13 +145,13 @@ class GhlController extends Controller
      */
     public function generateToken($id)
     {
-        $userToken = UserToken::whereType(WebhookSourceEnums::GHL)->where('property_id', $id)->first();
-        if (empty($userToken)) {
-            return back()->with('error', 'High Level Auth Code Not Genereated');
-        }
         $location = GhlLocation::find($id);
         if (empty($location)) {
             return back()->with('error', 'High Level Location Not Exist');
+        }
+        $userToken = UserToken::whereType(WebhookSourceEnums::GHL)->where('property_id', $location->location_id)->first();
+        if (empty($userToken)) {
+            return back()->with('error', 'High Level Auth Code Not Genereated');
         }
         $params = [
             'client_id' => $location->client_id,
@@ -173,7 +163,7 @@ class GhlController extends Controller
         $response = Http::asForm()->post(config('ghl.token_url'), $params);
         if ($response->successful()) {
             $json = $response->json();
-            $userToken = $this->saveGhlToken($id, $json['locationId'],  $json['access_token'], $json['refresh_token']);
+            $userToken = $this->saveGhlToken($json['locationId'],  $json['access_token'], $json['refresh_token']);
             return back()->with('success', 'GHL Access Token Genereated!');
         }
         if ($response->failed()) {
@@ -220,8 +210,7 @@ class GhlController extends Controller
 
     public function contacts($locationId)
     {
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return back()->with('error', $token['message']);
         }
@@ -257,9 +246,7 @@ class GhlController extends Controller
      */
     public static function getContact($locationId, $id)
     {
-
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return back()->with('error', $token['message']);
         }
@@ -287,13 +274,12 @@ class GhlController extends Controller
      */
     public static function getContactByCloudbedsId($locationId, $cbId)
     {
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return back()->with('error', $token['message']);
         }
         $userToken = $token['userToken'];
-        $map = PropertyLocationMap::where('location_id', $location->location_id)->first();
+        $map = PropertyLocationMap::where('location_id', $locationId)->first();
         if (empty($map)) {
             return [
                 'status' => false,
@@ -307,7 +293,7 @@ class GhlController extends Controller
             'Authorization' => 'Bearer ' . $userToken->access_token,
             'Version' => config('ghl.api_version_header'),
         ])->post($url, [
-            'locationId' => $location->location_id,
+            'locationId' => $locationId,
             'page' => 1,
             'pageLimit' => 1,
             'filters' => [
@@ -366,8 +352,7 @@ class GhlController extends Controller
                 ]
             ]
         ];
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return [
                 'status' => false,
@@ -417,8 +402,7 @@ class GhlController extends Controller
                 ]
             ]
         ];
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return [
                 'status' => false,
@@ -466,8 +450,7 @@ class GhlController extends Controller
 
     public function calendars($locationId)
     {
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return back()->with('error', $token['message']);
         }
@@ -496,8 +479,7 @@ class GhlController extends Controller
      */
     public static function pipelines($locationId)
     {
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return back()->with('error', $token['message']);
         }
@@ -528,13 +510,12 @@ class GhlController extends Controller
      */
     public static function customFields($locationId)
     {
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return back()->with('error', $token['message']);
         }
         $userToken = $token['userToken'];
-        $url = config('ghl.base_url') . 'locations/' . $location->location_id . '/customFields?model=contact';
+        $url = config('ghl.base_url') . 'locations/' . $locationId . '/customFields?model=contact';
         $response = Http::withHeaders([
             'Accept' => config('ghl.accept'),
             'Authorization' => 'Bearer ' . $userToken->access_token,
@@ -569,36 +550,6 @@ class GhlController extends Controller
             'headers' => $response->headers(),
             'json' => $response->json(),
         ];
-    }
-
-    // TODO
-    public function opportunities($locationId)
-    {
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
-        if (empty($token['status'])) {
-            return back()->with('error', $token['message']);
-        }
-        $userToken = $token['userToken'];
-
-
-        $url = config('ghl.base_url') . 'opportunities';
-
-        $response = Http::withHeaders([
-            'Accept' => config('ghl.accept'),
-            'Authorization' => 'Bearer ' . $userToken->access_token,
-            'Version' => config('ghl.api_version_header'),
-        ])->get($url);
-        if ($response->successful()) {
-            $data = $response->json();
-
-            dd($data);
-        }
-        if ($response->failed()) {
-            $ca = self::apiFailedResponse($response);
-
-            dd($ca);
-        }
     }
 
     /**
@@ -647,8 +598,7 @@ class GhlController extends Controller
         }
 
         // Get Token
-        $location = GhlLocation::where('location_id', $locationId)->first();
-        $token = self::getToken($location->id);
+        $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return ['status' => false, 'data' => 'Token Expired'];
         }

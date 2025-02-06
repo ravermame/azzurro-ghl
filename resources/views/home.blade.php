@@ -26,6 +26,7 @@
                         <strong>Create GoHighLevel (GHL) Location</strong>
                         <ul class="pl-3 mt-2">
                             <li>Create a GHL Developer App and obtain the <strong>Client ID</strong> and <strong>Client Secret</strong> from <a href="https://marketplace.gohighlevel.com/apps" target="_blank">GHL Marketplace</a>.</li>
+                            <li>Obtain <strong>Location Id</strong> from GHL Dashboard > Settings</li>
                             <li>Go to "GHL locations" and create a new location.</li>
                             <li>Generate an <strong>Auth Code</strong> and <strong>Access Token</strong>.</li>
                             <li>Create a custom contact field in GHL to store the Cloudbeds Guest ID and Propery Id if not exits (e.g., <strong>Guest ID, Propery ID</strong>).</li>

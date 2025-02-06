@@ -1,7 +1,7 @@
 @extends('layout')
 @section('section')
-<div class="container-fluid mt-5">
-    <h3>Webhooks</h3>
+<div class="container mt-5">
+    <h2>Webhooks</h2>
     <table class="table">
         <thead>
             <tr>

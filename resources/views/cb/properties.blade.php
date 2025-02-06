@@ -1,7 +1,7 @@
 @extends('layout')
 @section('section')
 <div class="container mt-5">
-    <h2 class="mb-4">Add New Property</h2>
+    <h2 class="mb-4">New CB Property</h2>
     <form action="{{ route('cb.save.property')}}" method="POST">
         @csrf
         <div class="row">

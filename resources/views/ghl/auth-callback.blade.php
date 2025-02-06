@@ -14,7 +14,7 @@
                 <label for="property_id">Respective Location</label>
                 <select class="form-control" name="location_id" id="location_id" required>
                     @foreach ($locations as $location)
-                    <option value="{{ $location->id }}">{{ $location->name }}</option>
+                    <option value="{{ $location->location_id }}">{{ $location->name }}</option>
                     @endforeach
                 </select>
             </div>

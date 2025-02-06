@@ -1,10 +1,15 @@
 @extends('layout')
 @section('section')
 <div class="container mt-5">
-    <h2 class="mb-4">Add New GHL Location</h2>
+    <h2 class="mb-4">New GHL Location</h2>
     <form action="{{ route('ghl.save.location')}}" method="POST">
         @csrf
         <div class="row">
+
+            <div class="mb-3 col-6">
+                <label for="location_id" class="form-label"><Link></Link>Location ID</label>
+                <input type="text" class="form-control" id="location_id" name="location_id" value="{{ old('location_id') }}" placeholder="Enter Location ID" required>
+            </div>
 
             <!-- Name -->
             <div class="mb-3 col-6">
@@ -64,16 +69,9 @@
 
                     <a href="{{ route('ghl.auth',['id' => $location->id ]) }}" class="btn btn-warning btn-sm mt-2">Request Auth Code</a> <br>
                     <a href="{{ route('ghl.token',['id' => $location->id ]) }}" class="btn btn-success btn-sm mt-2">Generate Access Token</a> <br>
-
-
-                    @if(!empty($location->location_id))
-
                     <a href="{{ route('ghl.contacts',['location_id'=> $location->location_id ]) }}" class="btn btn-success btn-sm mt-2">Contacts</a> <br>
                     <a href="{{ route('ghl.calendars',['location_id'=> $location->location_id ]) }}" class="btn btn-success btn-sm mt-2"> GHL Calendars</a> <br>
-                    {{-- <a href="{{ route('ghl.opportunities',['location_id'=> $location->location_id ]) }}" class=""> GHL Opportunities</a> <br> --}}
                     <a href="{{ route('ghl.pipelines',['location_id'=> $location->location_id ]) }}" class="btn btn-success btn-sm mt-2"> GHL Pipelines</a> <br>
-
-                    @endif
 
 
                 </td>

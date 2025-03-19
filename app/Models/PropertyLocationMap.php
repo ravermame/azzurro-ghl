@@ -14,7 +14,7 @@ class PropertyLocationMap extends Model
      *
      * @var array
      */
-    protected $fillable = ['property_id', 'location_id', 'pipeline_id', 'pipeline_name', 'pipeline_stage_id', 'pipeline_stage_name', 'contact_field_name', 'contact_field_id', 'contact_property_field_id', 'contact_property_field_name'];
+    protected $fillable = ['property_id', 'location_id', 'pipeline_id', 'pipeline_name', 'pipeline_stage_id', 'pipeline_stage_name', 'contact_field_name', 'contact_field_id', 'contact_property_field_id', 'contact_property_field_name', 'fields_map'];
 
 
     public function property()
@@ -25,5 +25,15 @@ class PropertyLocationMap extends Model
     public function location()
     {
         return $this->hasOne(GhlLocation::class, 'location_id', 'location_id');
+    }
+
+    public function setFieldsMapAttribute($value)
+    {
+        $this->attributes['fields_map'] = json_encode($value);
+    }
+
+    public function getFieldsMapAttribute($value): array
+    {
+        return json_decode($value, true);
     }
 }

@@ -327,31 +327,150 @@ class GhlController extends Controller
         }
     }
 
+    /**
+     * Prepare contact custom fields array
+     */
+    public static function prepareContactPayload($locationId, $reservationPayload)
+    {
+
+        $contact = reset($reservationPayload['guestList']);
+        $map = PropertyLocationMap::where('location_id', $locationId)->first();
+        $customFields = [];
+
+        if ($map && !empty($map->fields_map)) {
+
+            if (isset($map->fields_map['guest_id']) && isset($contact['guestID'])) {
+                $customFields[] = array(
+                    'name' => 'guestID',
+                    'id' => $map->fields_map['guest_id'],
+                    'field_value' => $contact['guestID']
+                );
+            }
+
+            if (isset($map->fields_map['property_id']) && isset($reservationPayload['propertyID'])) {
+                $customFields[] = array(
+                    'name' => 'propertyID',
+                    'id' => $map->fields_map['property_id'],
+                    'field_value' => $reservationPayload['propertyID']
+                );
+            }
+
+            if (isset($map->fields_map['reservation_id']) && isset($reservationPayload['reservationID'])) {
+                $customFields[] = array(
+                    'name' => 'reservationID',
+                    'id' => $map->fields_map['reservation_id'],
+                    'field_value' => $reservationPayload['reservationID']
+                );
+            }
+
+            if (isset($map->fields_map['reservation_status']) && isset($reservationPayload['status'])) {
+                $customFields[] = array(
+                    'name' => 'reservation_status',
+                    'id' => $map->fields_map['reservation_status'],
+                    'field_value' => $reservationPayload['status']
+                );
+            }
+
+            $reserveFields = array('start_date', 'end_date', 'guest_status', 'balance');
+            foreach ($reserveFields as $reserveField) {
+                if (isset($map->fields_map[$reserveField]) && isset($reservationPayload[toCamelCase($reserveField)])) {
+                    $customFields[] = array(
+                        'name' => $reserveField,
+                        'id' => $map->fields_map[$reserveField],
+                        'field_value' => $reservationPayload[toCamelCase($reserveField)]
+                    );
+                }
+            }
+
+            $room = reset($reservationPayload['unassigned']);
+            if (!empty($room)) {
+
+                if (isset($map->fields_map['sub_reservation_id']) && isset($room['subReservationID'])) {
+                    $customFields[] = array(
+                        'name' => 'subReservationID',
+                        'id' => $map->fields_map['sub_reservation_id'],
+                        'field_value' => $room['subReservationID']
+                    );
+                }
+
+                if (isset($map->fields_map['guest_adults']) && isset($room['adults'])) {
+                    $customFields[] = array(
+                        'name' => 'adults',
+                        'id' => $map->fields_map['guest_adults'],
+                        'field_value' => $room['adults']
+                    );
+                }
+
+                if (isset($map->fields_map['guest_children']) && isset($room['children'])) {
+                    $customFields[] = array(
+                        'name' => 'children',
+                        'id' => $map->fields_map['guest_children'],
+                        'field_value' => $room['children']
+                    );
+                }
+
+                $roomFields = array('room_type_name', 'room_type_name_short', 'room_total');
+                foreach ($roomFields as $roomField) {
+                    if (isset($map->fields_map[$roomField]) && isset($room[toCamelCase($roomField)])) {
+                        $customFields[] = array(
+                            'name' => $roomField,
+                            'id' => $map->fields_map[$roomField],
+                            'field_value' => $room[toCamelCase($roomField)]
+                        );
+                    }
+                }
+
+                if (isset($map->fields_map['room_type_id']) && isset($room['roomTypeID'])) {
+                    $customFields[] = array(
+                        'name' => 'roomTypeID',
+                        'id' => $map->fields_map['room_type_id'],
+                        'field_value' => $room['roomTypeID']
+                    );
+                }
+
+                $dailyRates = reset($room['dailyRates']);
+                if (isset($map->fields_map['assigned_daily_rates']) && isset($dailyRates['rate'])) {
+                    $customFields[] = array(
+                        'name' => 'date',
+                        'id' => $map->fields_map['assigned_daily_rates'],
+                        'field_value' => $dailyRates['rate']
+                    );
+                }
+                if (isset($map->fields_map['daily_rate_date']) && isset($dailyRates['date'])) {
+                    $customFields[] = array(
+                        'name' => 'rate',
+                        'id' => $map->fields_map['daily_rate_date'],
+                        'field_value' => $dailyRates['date']
+                    );
+                }
+            }
+        }
+
+        return [
+            "firstName" => $contact['guestFirstName'],
+            "lastName" => $contact['guestLastName'],
+            "email" => $contact['guestEmail'],
+            "phone" => $contact['guestPhone'],
+            "dateOfBirth" => $contact['guestBirthdate'],
+            "source" => $reservationPayload['source'],
+            // address
+            "city" => $contact['guestCity'],
+            "state" => $contact['guestState'],
+            "postalCode" => $contact['guestZip'],
+            "address1" => $contact['guestAddress'] . '' . $contact['guestAddress2'],
+            "country" => $contact['guestCountry'],
+            // custom fields
+            "customFields" => $customFields
+        ];
+    }
 
     /**
      * Create New Contact HighLevel
      */
-    public static function createNewContact($locationId, $request)
+    public static function createNewContact($locationId, $reservationPayload)
     {
-        $map = PropertyLocationMap::where('location_id', $locationId)->first();
-        $payload = [
-            "locationId" => $locationId,
-            "firstName" => $request['guestFirstName'],
-            "lastName" => $request['guestLastName'],
-            "email" => $request['guestEmail'],
-            "phone" => $request['guestPhone'],
-            "country" => $request['guestCountry'],
-            "customFields" => [
-                [
-                    'id' => $map->contact_field_id,
-                    'field_value' => $request['guestID']
-                ],
-                [
-                    'id' => $map->contact_property_field_id,
-                    'field_value' => $request['propertyID']
-                ]
-            ]
-        ];
+        $payload = self::prepareContactPayload($locationId, $reservationPayload);
+        $payload['locationId'] = $locationId;
         $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return [
@@ -382,26 +501,9 @@ class GhlController extends Controller
     /**
      * Create New Contact HighLevel
      */
-    public static function updateContact($locationId, $id, $request)
+    public static function updateContact($locationId, $id, $reservationPayload)
     {
-        $map = PropertyLocationMap::where('location_id', $locationId)->first();
-        $payload = [
-            "firstName" => $request['guestFirstName'],
-            "lastName" => $request['guestLastName'],
-            "email" => $request['guestEmail'],
-            "phone" => $request['guestPhone'],
-            "country" => $request['guestCountry'],
-            "customFields" => [
-                [
-                    'id' => $map->contact_field_id,
-                    'field_value' => $request['guestID']
-                ],
-                [
-                    'id' => $map->contact_property_field_id,
-                    'field_value' => $request['propertyID']
-                ]
-            ]
-        ];
+        $payload = self::prepareContactPayload($locationId, $reservationPayload);
         $token = self::getToken($locationId);
         if (empty($token['status'])) {
             return [
@@ -433,16 +535,19 @@ class GhlController extends Controller
     /**
      * Create or update contact on ghl
      */
-    public static function createOrUpdateContact($locationId, $request)
+    public static function createOrUpdateContact($locationId, $reservationPayload)
     {
-        $contact = self::getContactByCloudbedsId($locationId, $request['guestID']);
+        // Get Contacct
+        $cbContact = reset($reservationPayload['guestList']);
+        $contact = self::getContactByCloudbedsId($locationId, $cbContact['guestID']);
         if (!$contact['status']) {
             if ($contact['data'] && str_contains($contact['data'], 'Field Id Not Exist')) {
                 return $contact;
             } else if ($contact['data'] && str_contains($contact['data'], 'NOT FOUND')) {
-                return self::createNewContact($locationId, $request);
+                return self::createNewContact($locationId, $reservationPayload);
             }
         }
+        $contact = self::updateContact($locationId, $contact['data']['id'], $reservationPayload);
         // todo: update contact if required
         return $contact;
     }
@@ -589,10 +694,7 @@ class GhlController extends Controller
         $map = $map['data'];
         $locationId = $map->location_id;
 
-        // Get Contacct
-        $cbContact = reset($reservation['guestList']);
-        $cbContact['propertyID'] = $reservation['propertyID'];
-        $ghlContact = self::createOrUpdateContact($locationId, $cbContact);
+        $ghlContact = self::createOrUpdateContact($locationId, $reservation);
         if (!$ghlContact['status']) {
             return $ghlContact;
         }
@@ -664,6 +766,14 @@ class GhlController extends Controller
             "contact_property_field_name" => 'required|string|max:255',
         ]);
 
+        // Prepare fields map
+        $fieldsNames = $request->get('fields_cb_name', []);  // array of names
+        $fieldsIds = $request->get('fields_ghl_id', []);     // array of IDs
+        $fields_map = array_map(function ($name, $id) {
+            return [$name => $id];
+        }, $fieldsNames, $fieldsIds);
+        $fields_map = array_merge(...$fields_map); // Flatten the array 
+
         $map = PropertyLocationMap::find($id);
         if ($map) {
             $map->pipeline_id = $request->pipeline_id;
@@ -674,6 +784,7 @@ class GhlController extends Controller
             $map->contact_field_name = $request->contact_field_name;
             $map->contact_property_field_id = $request->contact_property_field_id;
             $map->contact_property_field_name = $request->contact_property_field_name;
+            $map->fields_map = $fields_map;
             $map->save();
             return redirect()->route('home')->with('success', 'Property-Location Map Saved!');
         }

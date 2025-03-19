@@ -33,7 +33,7 @@
                 <label for="pipeline_id">Select Pipeline</label>
                 <select class="form-control" name="pipeline_id" id="pipeline_id" required>
                     @foreach ($pipelines as $pipeline)
-                    <option value="{{ $pipeline['id']}}">{{ $pipeline['name'] }}</option>
+                    <option value="{{ $pipeline['id']}}" @if($map->pipeline_id == $pipeline['id']) selected @endif >{{ $pipeline['name'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -41,7 +41,7 @@
                 <label for="pipeline_stage_id">Select Pipeline Stage Id</label>
                 <select class="form-control" name="pipeline_stage_id" id="pipeline_stage_id" required>
                     @foreach (reset($pipelines)['stages'] as $stage )
-                    <option value="{{ $stage['id'] }}">{{ $stage['name'] }}</option>
+                    <option value="{{ $stage['id'] }}" @if($map->pipeline_stage_id == $stage['id']) selected @endif >{{ $stage['name'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -52,9 +52,7 @@
                 <label for="pipeline_id">Contact Cloudbeds Refrence On GHL</label>
                 <select class="form-control" name="contact_field_id" id="contact_field_id" required>
                     @foreach ($fields as $field)
-                    {{-- @if($field['fieldKey'] == 'contact.cb_reference') --}}
-                    <option value="{{ $field['id']}}">{{ $field['name'] }}</option>
-                    {{-- @endif --}}
+                    <option value="{{ $field['id']}}" @if($map->contact_field_id == $field['id']) selected @endif >{{ $field['name'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -64,13 +62,28 @@
                 <label for="pipeline_id">Contact Property Refrence On GHL</label>
                 <select class="form-control" name="contact_property_field_id" id="contact_property_field_id" required>
                     @foreach ($fields as $field)
-                    {{-- @if($field['fieldKey'] == 'contact.cb_reference') --}}
-                    <option value="{{ $field['id']}}">{{ $field['name'] }}</option>
-                    {{-- @endif --}}
+                    <option value="{{ $field['id']}}" @if($map->contact_property_field_id == $field['id']) selected @endif >{{ $field['name'] }}</option>
                     @endforeach
                 </select>
             </div>
         </div>
+        <h4 class="mt-2">
+            <i>CB-GHL Fields Mapping </i>
+        </h4>
+        @foreach (config('cloudbeds.fields') as $cbField)
+        <div class="row">
+            <div class="col-6 mt-2">
+                <input type="text" class="form-control" name="fields_cb_name[{{ $loop->index }}]" id="fields_map[{{ $loop->index }}]" value="{{ $cbField }}"  readonly >
+            </div>
+            <div class="col-6 mt-2">
+                <select class="form-control select" name="fields_ghl_id[{{ $loop->index }}]" id="fields_map[{{ $loop->index }}]" required>
+                    @foreach ($fields as $field )
+                    <option value="{{ $field['id'] }}" @if(toSnakeCase($cbField) === toSnakeCase($field['name'])) selected  @endif >{{ $field['name'] }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        @endforeach
 
         <div class="row">
             <div class="col mt-2 d-flex justify-content-end">
@@ -82,6 +95,11 @@
 @endsection
 @section('script')
 <script>
+
+    $(document).ready(function() {
+        $('.select').select2();
+    });
+
     const pipelines = @json($pipelines);
     const fields = @json($fields);
 

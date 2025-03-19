@@ -363,6 +363,14 @@ class GhlController extends Controller
                 );
             }
 
+            if (isset($map->fields_map['eta']) && isset($reservationPayload['estimatedArrivalTime'])) {
+                $customFields[] = array(
+                    'name' => 'estimatedArrivalTime',
+                    'id' => $map->fields_map['eta'],
+                    'field_value' => $reservationPayload['estimatedArrivalTime']
+                );
+            }
+
             if (isset($map->fields_map['reservation_status']) && isset($reservationPayload['status'])) {
                 $customFields[] = array(
                     'name' => 'reservation_status',
@@ -382,8 +390,16 @@ class GhlController extends Controller
                 }
             }
 
-            $room = reset($reservationPayload['unassigned']);
+            $room = reset($reservationPayload['assigned']);
             if (!empty($room)) {
+
+                if (isset($map->fields_map['room_id']) && isset($room['roomID'])) {
+                    $customFields[] = array(
+                        'name' => 'roomID',
+                        'id' => $map->fields_map['room_id'],
+                        'field_value' => $room['roomID']
+                    );
+                }
 
                 if (isset($map->fields_map['sub_reservation_id']) && isset($room['subReservationID'])) {
                     $customFields[] = array(
@@ -409,7 +425,7 @@ class GhlController extends Controller
                     );
                 }
 
-                $roomFields = array('room_type_name', 'room_type_name_short', 'room_total');
+                $roomFields = array('room_name', 'room_type_name', 'room_type_name_short', 'room_total');
                 foreach ($roomFields as $roomField) {
                     if (isset($map->fields_map[$roomField]) && isset($room[toCamelCase($roomField)])) {
                         $customFields[] = array(

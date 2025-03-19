@@ -44,6 +44,7 @@ return [
         'card_type',
         'card_number',
         'card_id',
+        'eta',
     ]
     // 'eta',                  // Estimated Time Arrival
     // 'tags',                 // Flienders, New - Reservation

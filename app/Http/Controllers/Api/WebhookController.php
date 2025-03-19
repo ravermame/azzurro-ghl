@@ -48,7 +48,7 @@ class WebhookController extends Controller
             'processed' => false
         ]);
 
-        if ($request->event = WebhookSourceEnums::RESERVATION_CREATED) {
+        if ($request->event == WebhookSourceEnums::RESERVATION_CREATED) {
             $reservation = CloudbedsController::getReservation($request->propertyID, $request->reservationID);
             if ($reservation['success']) {
                 $reservation = $reservation['data'];

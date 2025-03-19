@@ -34,6 +34,6 @@ class PropertyLocationMap extends Model
 
     public function getFieldsMapAttribute($value): array
     {
-        return json_decode($value, true);
+        return empty($value) ? [] : json_decode($value, true);
     }
 }

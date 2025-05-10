@@ -69,6 +69,8 @@ RUN composer dump -o \
     && composer check-platform-reqs \
     && rm -f /usr/bin/composer
 
+RUN chmod -R 755 /var/www/html
+
 # Copy custom entrypoint script
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
